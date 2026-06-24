@@ -157,37 +157,19 @@ TestProfanityCommentsAnalyzer/
 
 ## How to add, delete, or modify words
 
-### Which file to edit
+All language-specific words live in JSON files under [TestProfanityCommentsAnalyzer/profanity/](TestProfanityCommentsAnalyzer/profanity/). Edit the file for the language you want to change, then rebuild to verify.
 
-| Task | File to edit |
-|------|--------------|
-| Add / remove / change a word in one language | `profanity/{code}.json` (e.g. `en.json`) |
-| Turn a language on or off | `profanity/languages.json` and/or `.editorconfig` `profanity_comments_analyzer.languages` |
-| Add a new language (e.g. French) | Add `fr.json` + add `"fr"` to `languages.json` |
-| Add a phrase that applies to all languages | `profanity/extra-patterns.json` |
+### Language files
 
-### `languages.json` — language manifest
+| Language | File | `"code"` value |
+|----------|------|----------------|
+| English | `profanity/en.json` | `"en"` |
+| Hungarian | `profanity/hu.json` | `"hu"` |
+| German | `profanity/de.json` | `"de"` |
+| Italian | `profanity/it.json` | `"it"` |
+| Romanian | `profanity/ro.json` | `"ro"` |
 
-Declares which languages the analyzer loads. Every code listed here **must** have a matching `{code}.json` file.
-
-```json
-{
-  "languages": ["en", "hu", "de", "ro", "it"]
-}
-```
-
-- **Remove a language:** delete its code from the `"languages"` array (and optionally delete `{code}.json`)
-- **Add a language:** add the code here and create `{code}.json` with at least one entry
-
-When you provide `languages.json` via `AdditionalFiles`, it **replaces** the built-in manifest.
-
----
-
-### `{code}.json` — words for one language
-
-Each language file contains all words for that language. When you supply `{code}.json` via `AdditionalFiles`, it **fully replaces** the built-in embedded list for that code — it does **not** merge.
-
-**Structure:**
+Each file has the same structure:
 
 ```json
 {
@@ -204,50 +186,292 @@ Each language file contains all words for that language. When you supply `{code}
 }
 ```
 
-| Field | Required | Values |
-|-------|----------|--------|
-| `word` | Yes | Display name shown in PCA001 message |
-| `pattern` | Yes | .NET regex (case-insensitive at runtime; do not use `(?i)`) |
-| `severity` | Yes | `mild`, `moderate`, `severe` |
+| Field | Required | Description |
+|-------|----------|-------------|
+| `word` | Yes | Label shown in the PCA001 message |
+| `pattern` | Yes | .NET regex matched against comment text (case-insensitive; do not use `(?i)`) |
+| `severity` | Yes | `mild`, `moderate`, or `severe` |
 | `category` | No | `profanity`, `threat`, `slur`, `poorCode`, `badPractice`, `confusion` |
 
-The `"code"` property must match the file name (`en.json` → `"code": "en"`).
+Do **not** change `"code"` or `"name"` unless you rename the file itself. `"code"` must match the file name (`hu.json` → `"code": "hu"`).
 
-#### Add a word
+After any edit, verify with:
 
-Add a new object to the `"entries"` array in the language file, e.g. in `profanity/en.json`:
+```bash
+dotnet build TestProfanity.sln -t:Rebuild -v minimal
+```
+
+---
+
+### Add a new word
+
+Open the language file and append a new object to the `"entries"` array. Add a comma after the previous entry.
+
+**English — add `foobar` to `profanity/en.json`:**
+
+Before (last entries):
 
 ```json
-{
-  "word": "foobar",
-  "pattern": "\\bfoobar\\b",
-  "severity": "mild",
-  "category": "profanity"
+    {
+      "word": "idiot",
+      "pattern": "\\bidiot\\b",
+      "severity": "mild",
+      "category": "profanity"
+    }
+  ]
 }
 ```
 
-#### Delete a word
-
-Remove the entire entry object from the `"entries"` array in `{code}.json`.
-
-#### Modify a word
-
-Edit the `word`, `pattern`, `severity`, or `category` fields of the existing entry in `{code}.json`.
-
-Example — make `damn` moderate instead of mild, or tighten the regex:
+After:
 
 ```json
-{
-  "word": "damn",
-  "pattern": "\\bd[a@]mn\\b",
-  "severity": "moderate",
-  "category": "profanity"
+    {
+      "word": "idiot",
+      "pattern": "\\bidiot\\b",
+      "severity": "mild",
+      "category": "profanity"
+    },
+    {
+      "word": "foobar",
+      "pattern": "\\bfoobar\\b",
+      "severity": "mild",
+      "category": "profanity"
+    }
+  ]
 }
 ```
 
-#### Replace a whole language list
+**Hungarian — add `barom` to `profanity/hu.json`:**
 
-Copy the template `{code}.json`, edit the `"entries"` array, and save. Your file replaces the built-in list for that language. Languages you do **not** override keep their built-in lists.
+```json
+    {
+      "word": "barom",
+      "pattern": "\\bbarom\\b",
+      "severity": "mild",
+      "category": "profanity"
+    }
+```
+
+**German — add `Blödsinn` to `profanity/de.json`:**
+
+```json
+    {
+      "word": "Blödsinn",
+      "pattern": "\\bBl[oö]dsinn\\b",
+      "severity": "mild",
+      "category": "profanity"
+    }
+```
+
+**Italian — add `merda` to `profanity/it.json`:**
+
+```json
+    {
+      "word": "merda",
+      "pattern": "\\bmerda\\b",
+      "severity": "mild",
+      "category": "profanity"
+    }
+```
+
+**Romanian — add `prost` to `profanity/ro.json`:**
+
+```json
+    {
+      "word": "prost",
+      "pattern": "\\bprost\\b",
+      "severity": "mild",
+      "category": "profanity"
+    }
+```
+
+Use `\\b` at the start and end of the pattern to match whole words only. Use character classes for common substitutions (e.g. `@` for `a`, `0` for `o`).
+
+---
+
+### Delete a word
+
+Find the entry in the `"entries"` array and remove the entire `{ ... }` block. Remove the trailing comma from the entry above if it becomes the last one.
+
+**English — remove `damn` from `profanity/en.json`:**
+
+Before:
+
+```json
+    {
+      "word": "wtf",
+      "pattern": "\\bw[t*][f*]\\b",
+      "severity": "mild",
+      "category": "profanity"
+    },
+    {
+      "word": "damn",
+      "pattern": "\\bd[a@]mn\\b",
+      "severity": "mild",
+      "category": "profanity"
+    },
+    {
+      "word": "crap",
+      "pattern": "\\bcr[a@]p\\b",
+      "severity": "mild",
+      "category": "profanity"
+    }
+```
+
+After:
+
+```json
+    {
+      "word": "wtf",
+      "pattern": "\\bw[t*][f*]\\b",
+      "severity": "mild",
+      "category": "profanity"
+    },
+    {
+      "word": "crap",
+      "pattern": "\\bcr[a@]p\\b",
+      "severity": "mild",
+      "category": "profanity"
+    }
+```
+
+The same steps apply to any language file — e.g. delete `kurva` from `profanity/hu.json`, `Mist` from `profanity/de.json`, `casino` from `profanity/it.json`, or `naiba` from `profanity/ro.json` by removing that entry object.
+
+Comments containing the deleted word will no longer trigger PCA001 after rebuild.
+
+---
+
+### Modify a word
+
+Find the existing entry and change one or more fields. Common changes: severity, regex pattern, or display label.
+
+**English — change `damn` from mild to moderate in `profanity/en.json`:**
+
+Before:
+
+```json
+    {
+      "word": "damn",
+      "pattern": "\\bd[a@]mn\\b",
+      "severity": "mild",
+      "category": "profanity"
+    }
+```
+
+After:
+
+```json
+    {
+      "word": "damn",
+      "pattern": "\\bd[a@]mn\\b",
+      "severity": "moderate",
+      "category": "profanity"
+    }
+```
+
+With `profanity_comments_analyzer.min_severity = mild` in `.editorconfig`, severity changes have no visible effect. Set `min_severity = moderate` to hide mild matches, or set `min_severity = severe` to hide mild and moderate matches.
+
+**Hungarian — widen the regex for `szar` in `profanity/hu.json` to catch `sz@r`:**
+
+Before:
+
+```json
+    {
+      "word": "szar",
+      "pattern": "\\bsz[a@]r\\b",
+      "severity": "mild",
+      "category": "profanity"
+    }
+```
+
+After (same pattern, already covers `@`; change the label instead):
+
+```json
+    {
+      "word": "szar/sz@r",
+      "pattern": "\\bsz[a@]r\\b",
+      "severity": "moderate",
+      "category": "profanity"
+    }
+```
+
+**German — rename label and tighten category for `Mist` in `profanity/de.json`:**
+
+```json
+    {
+      "word": "Mist",
+      "pattern": "\\bMist\\b",
+      "severity": "mild",
+      "category": "badPractice"
+    }
+```
+
+**Italian — change severity for `casino` in `profanity/it.json`:**
+
+```json
+    {
+      "word": "casino",
+      "pattern": "\\bcasino\\b",
+      "severity": "severe",
+      "category": "profanity"
+    }
+```
+
+**Romanian — update pattern for `dracu` in `profanity/ro.json`:**
+
+```json
+    {
+      "word": "dracu",
+      "pattern": "\\bdr[a@]cu\\b",
+      "severity": "mild",
+      "category": "profanity"
+    }
+```
+
+---
+
+### Quick reference
+
+| Action | Steps |
+|--------|-------|
+| **Add** | Open `profanity/{code}.json` → add `{ ... }` to `"entries"` → rebuild |
+| **Delete** | Open `profanity/{code}.json` → remove the `{ ... }` block → fix commas → rebuild |
+| **Modify** | Open `profanity/{code}.json` → edit fields in the existing `{ ... }` block → rebuild |
+
+| Language code | File to open |
+|---------------|--------------|
+| `en` | `profanity/en.json` |
+| `hu` | `profanity/hu.json` |
+| `de` | `profanity/de.json` |
+| `it` | `profanity/it.json` |
+| `ro` | `profanity/ro.json` |
+
+---
+
+### Which file to edit (other tasks)
+
+| Task | File to edit |
+|------|--------------|
+| Turn a language on or off | `profanity/languages.json` and/or `.editorconfig` `profanity_comments_analyzer.languages` |
+| Add a new language (e.g. French) | Create `profanity/fr.json` + add `"fr"` to `languages.json` |
+| Add a phrase for all languages | `profanity/extra-patterns.json` |
+
+### `languages.json` — language manifest
+
+Declares which languages the analyzer loads. Every code listed here **must** have a matching `{code}.json` file.
+
+```json
+{
+  "languages": ["en", "hu", "de", "ro", "it"]
+}
+```
+
+- **Remove a language:** delete its code from the `"languages"` array (and optionally delete `{code}.json`)
+- **Add a language:** add the code here and create `{code}.json` with at least one entry
+
+When you provide `languages.json` via `AdditionalFiles`, it **replaces** the built-in manifest.
+
+When you provide a `{code}.json` via `AdditionalFiles`, it **fully replaces** the built-in embedded list for that language — it does **not** merge. Languages you do not override keep their built-in lists.
 
 Example: you provide only `profanity/hu.json`. English, German, Italian, and Romanian still use embedded defaults; Hungarian uses your file.
 
