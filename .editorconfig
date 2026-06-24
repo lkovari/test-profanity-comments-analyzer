@@ -1,0 +1,7 @@
+root = true
+
+[*.cs]
+dotnet_diagnostic.PCA001.severity = warning
+
+profanity_comments_analyzer.min_severity = mild
+profanity_comments_analyzer.languages = en,hu,de,ro,it
